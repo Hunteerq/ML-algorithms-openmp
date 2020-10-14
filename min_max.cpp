@@ -1,12 +1,17 @@
 #include <iostream>
-#include <omp.h>
+#include "rapidcsv.h"
 
 int main() {
 
-    #pragma omp parallel for
-    for (int i = 0; i < 100; i++)
-    {
-        std::cout << i << std::endl;
+    rapidcsv::Document doc("data/weatherAUS.csv", rapidcsv::LabelParams(0, 0));
+    std::vector<std::string> columns = doc.GetColumnNames();
+    for (auto column : columns) {
+        std::cout << doc.GetColumn<std::string>(column)[0] << std::endl;
+        break;
+
     }
+
     return 0;
 }
+
+
