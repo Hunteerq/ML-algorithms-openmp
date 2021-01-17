@@ -106,14 +106,14 @@ std::vector<long> encode(std::string column_name, rapidcsv::Document document) {
     std::vector<long> results;
 
     long i = 0;
-#pragma parallel for shared(labels_encoded, i)
+    #pragma omp parallel for shared(labels_encoded, i)
     for (std::vector<std::string>::iterator it = rows.begin(); it != rows.end(); ++it) {
         if (labels_encoded.find(*it)  ==  labels_encoded.end()) {
             labels_encoded.insert({*it, i});
             i++;
         }
     }
-#pragma parallel for shared(results, labels_encoded)
+    #pragma omp parallel for shared(results, labels_encoded)
     for (std::vector<std::string>::iterator it = rows.begin(); it != rows.end(); ++it) {
         results.push_back(labels_encoded.find(*it)->second);
     }
