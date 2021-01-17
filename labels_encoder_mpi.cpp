@@ -13,14 +13,12 @@ int main(int argc, char * argv[] ) {
 
     int processRank, processesNumber;
     MPI_Init(&argc, &argv);
-    omp_set_num_threads(2);
     MPI_Comm_size(MPI_COMM_WORLD, &processesNumber);
     MPI_Comm_rank(MPI_COMM_WORLD, &processRank);
     MPI_Status Stat;
     std::string path_to_data = argv[1];
 
 
-    omp_set_num_threads(thread_num);
     rapidcsv::Document doc(path_to_data, rapidcsv::LabelParams(0, -1));
     long number_of_rows = doc.GetRowCount();
 
@@ -33,20 +31,23 @@ int main(int argc, char * argv[] ) {
     if (processRank != 0) {
         std::vector<long> results;
         for (std::vector<std::string>::iterator it = columns.begin() + (processRank - 1);
-            it < processesNumber * processRank && it != columns.end(); ++it) {
-            std::vector current_results = encode(*it, doc);
+            std::distance( columns.begin(), it ) != processesNumber * processRank && it != columns.end(); ++it) {
+            std::vector<long> current_results = encode(*it, doc);
             std::copy (current_results.begin(), current_results.end(), std::back_inserter(results));
         }
         long *results_array = (long *) malloc(results.size() * sizeof(long));
         std::copy(results.begin(), results.end(), results_array);
 
+        std::cout << "Sent size = " << sizeof(long) * results.size() << " By process = " << processRank << std::endl;
         MPI_Send(results_array, sizeof(long) * results.size(), MPI_BYTE, 0, 1, MPI_COMM_WORLD);
     } else {
         int size = number_of_rows * columnsNumber;
         long *results = new long [size];
 
-        std::vector<std::vector<long>> final_result;
+        std::vector<std::vector<long> > final_result;
         for (int proc_rank = 1; proc_rank < processesNumber; proc_rank++) {
+            std::cout << "Received size = " << sizeof(long) * size / (processesNumber - 1) << " By process = " << proc_rank << std::endl;
+
             MPI_Recv(results, sizeof(long) * size / (processesNumber - 1), MPI_BYTE, proc_rank, 1,
                                                    MPI_COMM_WORLD, &Stat);
         }

@@ -13,7 +13,7 @@ COMPILE_COMMAND := $(CC) $(CFLAGS)
 
 CC_MPI := mpic++
 
-CFLAGS_MPI :=  -lstdc++ -lm
+CFLAGS_MPI := -std=c++11 -lstdc++ -lm
 
 COMPILE_COMMAND_MPI := $(CC_MPI) $(CFLAGS_MPI)
 

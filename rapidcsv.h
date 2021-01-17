@@ -1505,7 +1505,7 @@ namespace rapidcsv
         LabelParams mLabelParams;
         SeparatorParams mSeparatorParams;
         ConverterParams mConverterParams;
-        std::vector<std::vector<std::string>> mData;
+        std::vector<std::vector<std::string> > mData;
         std::map<std::string, size_t> mColumnNames;
         std::map<std::string, size_t> mRowNames;
 #ifdef HAS_CODECVT
