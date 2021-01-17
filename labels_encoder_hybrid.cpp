@@ -13,11 +13,15 @@ int main(int argc, char * argv[] ) {
 
 
     int processRank, processesNumber;
+
+    int thread_num = atoi(argv[1]);
+    omp_set_num_threads(thread_num);
+
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &processesNumber);
     MPI_Comm_rank(MPI_COMM_WORLD, &processRank);
     MPI_Status Stat;
-    std::string path_to_data = argv[1];
+    std::string path_to_data = argv[2];
 
 
     rapidcsv::Document doc(path_to_data, rapidcsv::LabelParams(0, -1));
