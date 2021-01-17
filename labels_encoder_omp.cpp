@@ -4,14 +4,9 @@
 #include <limits>
 #include "rapidcsv.h"
 
-long double get_max(const std::vector<long double>& values);
-long double get_min(const std::vector<long double>& values);
+void save_doc(rapidcsv::Document doc);
+std::vector<long> encode(std::string column_name, rapidcsv::Document document);
 
-std::vector<long double> getNormalizedVals(const std::vector<long double>& vals, long double first, long double second);
-std::map<std::string, std::pair<long double, long double>>  get_min_maxs(const rapidcsv::Document &doc, const std::vector<std::string> &columns);
-std::map<std::string, std::vector<long double>> get_normalized_values(const rapidcsv::Document &doc, const std::map<std::string, std::pair<long double, long double>> &min_maxs);
-
-void save_doc(std::map<std::string, std::vector<long double>> normalized_values, rapidcsv::Document doc);
 
 int main(int argc, char * argv[] ) {
 
@@ -23,19 +18,43 @@ int main(int argc, char * argv[] ) {
 
     double start_time = omp_get_wtime();
     std::vector<std::string> columns = doc.GetColumnNames();
-    std::map<std::string, std::pair<long double, long double>> min_maxs = get_min_maxs(doc, columns);
-    std::map<std::string, std::vector<long double>> normalized_values = get_normalized_values(doc, min_maxs);
+    std::cout << columns.size() << std::endl;
+
+    #pragma parallel for default(none) shared(columns, doc)
+    for (std::vector<std::string>::iterator it = columns.begin(); it != columns.end(); ++it) {
+        doc.SetColumn(*it, encode(*it, doc));
+    }
     double end_time = omp_get_wtime();
-    save_doc(normalized_values, doc);
-    std::cout << "Normalization min-max took " << end_time - start_time << " seconds" << std::endl;
+    std::cout << "Labels encoding took " << end_time - start_time << " seconds" << std::endl;
+    save_doc(doc);
 }
 
-void save_doc(std::map<std::string, std::vector<long double>> normalized_values, rapidcsv::Document doc) {
-    std::ofstream myFile("result.csv");
-    for (auto const& norm: normalized_values) {
-        doc.SetColumn(norm.first, norm.second);
-    }
-    doc.Save(myFile);
 
+std::vector<long> encode(std::string column_name, rapidcsv::Document document) {
+    std::vector<std::string> rows = document.GetColumn<std::string>(column_name);
+    std::map<std::string, long> labels_encoded;
+    std::vector<long> results;
+
+    long i = 0;
+    #pragma parallel for shared(labels_encoded, i)
+    for (std::vector<std::string>::iterator it = rows.begin(); it != rows.end(); ++it) {
+        if (labels_encoded.find(*it)  ==  labels_encoded.end()) {
+            labels_encoded.insert({*it, i});
+            i++;
+        }
+    }
+
+    #pragma parallel for shared(results, labels_encoded)
+    for (std::vector<std::string>::iterator it = rows.begin(); it != rows.end(); ++it) {
+        results.push_back(labels_encoded.find(*it)->second);
+    }
+
+    return results;
+}
+
+
+void save_doc(rapidcsv::Document doc) {
+    std::ofstream myFile("result_omp.csv");
+    doc.Save(myFile);
 }
 
