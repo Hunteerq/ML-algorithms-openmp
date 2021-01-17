@@ -30,15 +30,16 @@ int main(int argc, char * argv[] ) {
     double start_time = MPI_Wtime();
     if (processRank != 0) {
         std::vector<long> results;
-        for (std::vector<std::string>::iterator it = columns.begin() + (processRank - 1);
-            std::distance( columns.begin(), it ) != processesNumber * processRank && it != columns.end(); ++it) {
-            std::vector<long> current_results = encode(*it, doc);
-            std::copy (current_results.begin(), current_results.end(), std::back_inserter(results));
+        for (std::vector<std::string>::iterator it = columns.begin(); it < columns.end(); ++it) {
+            if ((processRank - 1) * columnsNumber / processesNumber < std::distance( columns.begin(), it ) < processRank * columnsNumber / processesNumber) {
+                std::vector<long> current_results = encode(*it, doc);
+                std::copy (current_results.begin(), current_results.end(), std::back_inserter(results));
+
+            }
         }
         long *results_array = (long *) malloc(results.size() * sizeof(long));
         std::copy(results.begin(), results.end(), results_array);
 
-        std::cout << "Sent size = " << sizeof(long) * results.size() << " By process = " << processRank << std::endl;
         MPI_Send(results_array, sizeof(long) * results.size(), MPI_BYTE, 0, 1, MPI_COMM_WORLD);
     } else {
         int size = number_of_rows * columnsNumber;
@@ -46,7 +47,6 @@ int main(int argc, char * argv[] ) {
 
         std::vector<std::vector<long> > final_result;
         for (int proc_rank = 1; proc_rank < processesNumber; proc_rank++) {
-            std::cout << "Received size = " << sizeof(long) * size / (processesNumber - 1) << " By process = " << proc_rank << std::endl;
 
             MPI_Recv(results, sizeof(long) * size / (processesNumber - 1), MPI_BYTE, proc_rank, 1,
                                                    MPI_COMM_WORLD, &Stat);
@@ -58,8 +58,8 @@ int main(int argc, char * argv[] ) {
             i++;
         }
     }
-    MPI_Finalize();
     double end_time = MPI_Wtime();
+    MPI_Finalize();
     std::cout << "Labels encoding took " << end_time - start_time << " seconds for MPI" << std::endl;
     save_doc(doc);
 
@@ -82,7 +82,6 @@ std::vector<long> encode(std::string column_name, rapidcsv::Document document) {
     }
     return results;
 }
-
 
 void save_doc(rapidcsv::Document doc) {
     std::ofstream myFile("result_omp.csv");
